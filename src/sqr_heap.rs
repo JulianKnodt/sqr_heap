@@ -89,8 +89,8 @@ impl<T: Ord> SqrHeap<T> {
 #[derive(Debug, Default)]
 struct LastPointer {
   base: usize,
-  depth: u8,
   last_row_fill: usize,
+  depth: u8,
 }
 
 impl LastPointer {
@@ -178,8 +178,8 @@ impl<T> Drop for Hole<'_, T> {
 #[inline]
 const fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
   let offset = i - base;
-  let sibling_num = offset >> depth; // = offset/(1 << depth)?
-  let prev_base = base - base_layer_lookup(depth - 1) as usize;
+  let sibling_num = offset >> depth; // = offset/(1 << depth)
+  let prev_base = base - base_layer_lookup(depth - 1);
   (prev_base, sibling_num)
 }
 
