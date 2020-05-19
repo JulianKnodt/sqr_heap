@@ -183,8 +183,7 @@ const fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
   (prev_base, sibling_num)
 }
 
-// TODO maybe convert this to a look-up table?
-/// Returns the size of a layer at a given depth
+/// Returns the size of a layer at a given depth.
 #[inline]
 const fn base_layer(d: usize) -> usize {
   1 << ((d*d + d)/2)
@@ -204,11 +203,12 @@ const LAYER_TABLE: [usize; 10] = [
   base_layer(9),
 ];
 
+/// Uses a lookup table to get the base layer.
+// TODO maybe make this an unchecked access?
 #[inline]
-const fn base_layer_lookup(d: u8) -> usize {
-  LAYER_TABLE[d as usize]
-}
+const fn base_layer_lookup(d: u8) -> usize { LAYER_TABLE[d as usize] }
 
+/*
 #[inline]
 /// Returns the next base and offset for this child. The sum is the position of the first child.
 /// `sibling_num` is which sibling is this being called from.
@@ -217,6 +217,7 @@ const fn child_index(base: usize, depth: usize, sibling_num: usize) -> (usize, u
   let offset = (2 << depth) * sibling_num;
   (base, offset)
 }
+*/
 
 #[test]
 fn test_parent() {
@@ -235,6 +236,7 @@ fn test_parent() {
   assert_eq!((1, 1), parent_index(10, 2, 3));
 }
 
+/*
 #[test]
 fn test_child() {
   // first layer
@@ -246,6 +248,7 @@ fn test_child() {
 
   assert_eq!((3, 4), child_index(1, 1, 1));
 }
+*/
 
 #[test]
 fn test_basic() {
