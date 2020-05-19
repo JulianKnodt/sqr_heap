@@ -3,7 +3,7 @@ use sqr_heap::sqr_heap::SqrHeap;
 use std::{collections::BinaryHeap, time::Duration};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-  let range = (8..14).map(|p| 1 << p);
+  let range = (4..10).map(|p| 1 << p);
   let mut group = c.benchmark_group("pop->push pair");
   for l in range {
     let mut sh = SqrHeap::new();

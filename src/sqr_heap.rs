@@ -77,8 +77,8 @@ impl<T: Ord> SqrHeap<T> {
         depth += 1;
         curr_sibling = curr_sibling * num_siblings + offset;
         let (b, o) = child_index(base, depth, curr_sibling);
+        base = b;
         child = b + o;
-        base = b
       }
       hole.pos
     }
@@ -110,21 +110,13 @@ impl LastPointer {
     }
   }
   fn dec(&mut self) {
-    self.last_row_fill = match self.last_row_fill.checked_sub(1) {
-      Some(lrf) => lrf,
-
-      // removed an entire bottom row need to shift up one row
-      None => {
-        debug_assert!(
-          self.depth > 0,
-          "Decrementing last pointer before beginning of array"
-        );
-        self.depth -= 1;
-        let prev = base_layer(self.depth);
-        self.base -= prev as usize;
-        prev as u32 - 1
-      },
-    };
+    self.last_row_fill -= 1;
+    if self.last_row_fill == 0 && self.depth > 0 {
+      self.depth -= 1;
+      let prev = base_layer(self.depth);
+      self.base -= prev as usize;
+      self.last_row_fill = prev as u32;
+    }
   }
 }
 
