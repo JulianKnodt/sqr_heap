@@ -54,34 +54,33 @@ impl<T: Ord + Debug> SqrHeap<T> {
     Some(item)
   }
   fn sift_down(&mut self, idx: usize, end: usize) -> usize {
-    let mut curr = idx;
     let mut depth = 0;
     let mut base = 0;
     let mut curr_sibling = 0;
-    while curr < end {
+    unsafe {
+      let mut hole = Hole::new(&mut self.data, idx);
       let (b, o) = child_index(base, depth, curr_sibling);
-      let offset = b + o;
-      let num_children = 2 << depth;
-      let posses = &self.data[offset..(offset + num_children).min(self.data.len())];
-      // find position of max child
-      let max_pos = posses
-        .into_iter()
-        .enumerate()
-        .max_by_key(|v| v.1)
-        .map(|v| v.0);
-
-      match max_pos {
-        Some(mp) if self.data[offset + mp] > self.data[curr] => {
-          self.data.swap(curr, offset + mp);
-          curr_sibling = curr_sibling * num_children + mp;
-          curr = offset + mp;
-        },
-        _ => return curr,
+      let mut child = b + o;
+      while child < end {
+        let num_siblings = 2 << depth;
+        let mut offset = 0;
+        for i in 1..(child + num_siblings).min(end).saturating_sub(child) {
+          if &hole.data[child + i] > &hole.data[child + offset] {
+            offset = i;
+          }
+        }
+        if hole.curr() >= &hole.data[child + offset] {
+          break;
+        }
+        hole.move_to(child + offset);
+        curr_sibling = curr_sibling * num_siblings + offset;
+        base += base_layer(depth) as usize;
+        depth += 1;
+        let (b, o) = child_index(base, depth, curr_sibling);
+        child = b + o;
       }
-      base += base_layer(depth) as usize;
-      depth += 1;
+      hole.pos
     }
-    curr
   }
 }
 
@@ -229,7 +228,7 @@ fn test_child() {
 #[test]
 fn test_basic() {
   let mut sh = SqrHeap::new();
-  let n = 13;
+  let n = 5000;
   for i in 0..n {
     sh.push(i);
   }
@@ -248,6 +247,6 @@ fn test_basic() {
     out.push(sh.pop().unwrap());
   }
   for i in 0..n - 1 {
-    assert!(out[i] >= out[i + 1]);
+    assert!(out[i] >= out[i + 1], "{:?}", out);
   }
 }
