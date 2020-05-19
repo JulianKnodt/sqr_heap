@@ -1,5 +1,7 @@
-#![allow(unused)]
-use std::mem::swap;
+use std::{
+  mem::{swap, ManuallyDrop},
+  ptr,
+};
 use std::fmt::Debug;
 
 /// Max heap which uses a squaring strategy for the number of children
@@ -9,7 +11,7 @@ pub struct SqrHeap<T> {
   ptr: LastPointer,
 }
 
-impl<T: Ord> SqrHeap<T> {
+impl<T: Ord + Debug> SqrHeap<T> {
   pub fn new() -> Self {
     Self {
       data: vec![],
@@ -24,26 +26,25 @@ impl<T: Ord> SqrHeap<T> {
   }
   // sifts up idx at least until end and returns the final index
   fn sift_up(&mut self, end: usize, idx: usize) -> usize {
-    let mut curr = idx;
-    let mut depth = self.ptr.depth;
-    let mut base = self.ptr.base;
-    while curr > end {
-      let (b, o) = parent_index(curr, depth, base);
-      let parent = b + o;
-      if self.data[curr] <= self.data[parent] {
-        break;
+    unsafe {
+      let mut hole = Hole::new(&mut self.data, idx);
+      let mut depth = self.ptr.depth;
+      let mut base = self.ptr.base;
+      while hole.pos > end {
+        let (b, o) = parent_index(hole.pos, depth, base);
+        let parent = b + o;
+        if hole.curr() <= &hole.data[parent] {
+          break;
+        }
+        hole.move_to(parent);
+        depth -= 1;
+        base -= base_layer(depth) as usize;
       }
-      self.data.swap(curr, parent);
-      depth -= 1;
-      base -= base_layer(depth) as usize;
-      curr = parent;
+      hole.pos
     }
-    curr
   }
-  pub fn peek(&self) -> Option<&T> {
-    Some(self.data.get(0)?)
-  }
-  fn pop(&mut self) -> Option<T> {
+  pub fn peek(&self) -> Option<&T> { Some(self.data.get(0)?) }
+  pub fn pop(&mut self) -> Option<T> {
     let mut item = self.data.pop()?;
     self.ptr.dec();
     if let Some(mut min) = self.data.get_mut(0) {
@@ -51,12 +52,6 @@ impl<T: Ord> SqrHeap<T> {
       self.sift_down(0, self.data.len());
     }
     Some(item)
-  }
-  fn children(&self, base: usize, depth: u32, sib_num: usize) -> &[T] {
-    let (b, o) = child_index(base, depth, sib_num);
-    let num_children = 1 << depth;
-    let offset = b + o;
-    &self.data[offset..offset+num_children]
   }
   fn sift_down(&mut self, idx: usize, end: usize) -> usize {
     let mut curr = idx;
@@ -67,15 +62,17 @@ impl<T: Ord> SqrHeap<T> {
       let (b, o) = child_index(base, depth, curr_sibling);
       let offset = b + o;
       let num_children = 2 << depth;
-      let posses = &self.data[offset..(offset+num_children).min(self.data.len())];
+      let posses = &self.data[offset..(offset + num_children).min(self.data.len())];
       // find position of max child
-      let max_pos = posses.into_iter().enumerate()
+      let max_pos = posses
+        .into_iter()
+        .enumerate()
         .max_by_key(|v| v.1)
         .map(|v| v.0);
 
       match max_pos {
-        Some(mp) if self.data[offset+mp] > self.data[curr] => {
-          self.data.swap(curr, offset+mp);
+        Some(mp) if self.data[offset + mp] > self.data[curr] => {
+          self.data.swap(curr, offset + mp);
           curr_sibling = curr_sibling * num_children + mp;
           curr = offset + mp;
         },
@@ -134,7 +131,7 @@ impl LastPointer {
 #[test]
 fn test_last_ptr() {
   let mut p = LastPointer::new();
-  let mut n = 1000;
+  let n = 1000;
   for i in 0..n {
     p.inc();
     assert_eq!(p.base + p.last_row_fill as usize, i + 1);
@@ -142,6 +139,40 @@ fn test_last_ptr() {
   for i in 0..n {
     p.dec();
     assert_eq!(p.base + p.last_row_fill as usize, n - i - 1);
+  }
+}
+
+// used in binary heap, thought I'd use it as well.
+struct Hole<'a, T> {
+  data: &'a mut [T],
+  elt: ManuallyDrop<T>,
+  pos: usize,
+}
+
+impl<'a, T> Hole<'a, T> {
+  unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
+    debug_assert!(pos < data.len());
+    let elt = ManuallyDrop::new(ptr::read(data.get_unchecked(pos)));
+    Self { elt, data, pos }
+  }
+  fn curr(&self) -> &T { &self.elt }
+  unsafe fn move_to(&mut self, idx: usize) {
+    debug_assert_ne!(idx, self.pos);
+    debug_assert!(idx < self.data.len());
+    let index_ptr: *const _ = self.data.get_unchecked(idx);
+    let hole_ptr = self.data.get_unchecked_mut(self.pos);
+    ptr::copy_nonoverlapping(index_ptr, hole_ptr, 1);
+    self.pos = idx;
+  }
+}
+impl<T> Drop for Hole<'_, T> {
+  #[inline]
+  fn drop(&mut self) {
+    // fill the hole again
+    unsafe {
+      let pos = self.pos;
+      ptr::copy_nonoverlapping(&*self.elt, self.data.get_unchecked_mut(pos), 1);
+    }
   }
 }
 
@@ -160,11 +191,7 @@ const fn base_layer(d: u32) -> u32 { 1 << (d * (d + 1) / 2) }
 /// Returns the next base and offset for this child. The sum is the index.
 /// `sibling_num` is which sibling is this being called from
 /// `child_num` is which child is being accessed.
-const fn child_index(
-  base: usize,
-  depth: u32,
-  sibling_num: usize,
-) -> (usize, usize) {
+const fn child_index(base: usize, depth: u32, sibling_num: usize) -> (usize, usize) {
   let base = base + base_layer(depth) as usize;
   let offset = (2 << depth) * sibling_num;
   (base, offset)
@@ -199,12 +226,10 @@ fn test_child() {
   assert_eq!((3, 4), child_index(1, 1, 1));
 }
 
-
-
 #[test]
 fn test_basic() {
   let mut sh = SqrHeap::new();
-  let n = 100000;
+  let n = 13;
   for i in 0..n {
     sh.push(i);
   }
@@ -215,14 +240,14 @@ fn test_basic() {
     let (b, o) = parent_index(i, ptr.depth, ptr.base);
     let parent = b + o;
     // checking all parents are greater than all children
-    assert!(sh.data[parent] >= sh.data[i]);
+    assert!(sh.data[parent] >= sh.data[i], "{:?}: {:?}", i, sh.data);
   }
 
   let mut out = vec![];
-  for i in 0..n {
+  for _ in 0..n {
     out.push(sh.pop().unwrap());
   }
-  for i in 0..n-1 {
-    assert!(out[i] >= out[i+1]);
+  for i in 0..n - 1 {
+    assert!(out[i] >= out[i + 1]);
   }
 }
