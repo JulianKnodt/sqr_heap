@@ -1,20 +1,30 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use sqr_heap::sqr_heap::SqrHeap;
 use std::collections::BinaryHeap;
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-  let mut sh = SqrHeap::new();
-  c.bench_function("sqr_heap_push", |b| {
-    b.iter(|| {
-      sh.push(black_box(1));
-    })
-  });
-  let mut bh = BinaryHeap::new();
-  c.bench_function("bh_heap_push", |b| {
-    b.iter(|| {
-      bh.push(black_box(1));
-    })
-  });
+  let range = (0..12).map(|p| 1 << p);
+  let mut group = c.benchmark_group("pop->push pair");
+  for l in range {
+    let mut sh = SqrHeap::new();
+    let mut bh = BinaryHeap::new();
+    for i in 0..l {
+      sh.push(i);
+      bh.push(i);
+    }
+    group.bench_with_input(BenchmarkId::new("Sqr Heap", l), &l, |b, _| {
+      b.iter(|| {
+        let out = sh.pop().unwrap();
+        sh.push(out);
+      })
+    });
+    group.bench_with_input(BenchmarkId::new("Bin Heap", l), &l, |b, _| {
+      b.iter(|| {
+        let out = bh.pop().unwrap();
+        bh.push(out);
+      })
+    });
+  }
 }
 
 criterion_group!(bench, criterion_benchmark);

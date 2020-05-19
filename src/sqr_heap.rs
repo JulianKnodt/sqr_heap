@@ -1,8 +1,8 @@
 use std::{
+  fmt::Debug,
   mem::{swap, ManuallyDrop},
   ptr,
 };
-use std::fmt::Debug;
 
 /// Max heap which uses a squaring strategy for the number of children
 #[derive(Debug)]
