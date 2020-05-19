@@ -1,5 +1,4 @@
 use std::{
-  fmt::Debug,
   mem::{swap, ManuallyDrop},
   ptr,
 };
@@ -11,7 +10,7 @@ pub struct SqrHeap<T> {
   ptr: LastPointer,
 }
 
-impl<T: Ord + Debug> SqrHeap<T> {
+impl<T: Ord> SqrHeap<T> {
   pub fn new() -> Self {
     Self {
       data: vec![],

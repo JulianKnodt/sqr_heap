@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use sqr_heap::sqr_heap::SqrHeap;
-use std::collections::BinaryHeap;
+use std::{collections::BinaryHeap, time::Duration};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-  let range = (0..12).map(|p| 1 << p);
+  let range = (0..20).map(|p| 1 << p);
   let mut group = c.benchmark_group("pop->push pair");
   for l in range {
     let mut sh = SqrHeap::new();
@@ -27,5 +27,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
   }
 }
 
-criterion_group!(bench, criterion_benchmark);
+criterion_group! {
+  name = bench;
+  config = Criterion::default().warm_up_time(Duration::from_secs(8));
+  targets = criterion_benchmark,
+}
 criterion_main!(bench);
