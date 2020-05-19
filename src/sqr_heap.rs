@@ -31,13 +31,13 @@ impl<T: Ord> SqrHeap<T> {
       let mut base = self.ptr.base;
       while hole.pos > end {
         let (b, o) = parent_index(hole.pos, depth, base);
+        base = b;
         let parent = b + o;
         if hole.curr() <= &hole.data[parent] {
           break;
         }
         hole.move_to(parent);
         depth -= 1;
-        base = b;
       }
       hole.pos
     }
@@ -48,18 +48,18 @@ impl<T: Ord> SqrHeap<T> {
     self.ptr.dec();
     if let Some(mut min) = self.data.get_mut(0) {
       swap(&mut item, &mut min);
-      self.sift_down(0, self.data.len());
+      self.sift_down_root(self.data.len());
     }
     Some(item)
   }
-  fn sift_down(&mut self, idx: usize, end: usize) -> usize {
+  fn sift_down_root(&mut self, end: usize) -> usize {
     let mut depth = 0;
     let mut curr_sibling = 0;
-    let mut num_siblings = 2 << 0;
+    let mut num_siblings = 2;
+    let mut base = base_layer_lookup(0);
+    let mut child = 1;
     unsafe {
-      let mut hole = Hole::new(&mut self.data, idx);
-      let mut base = base_layer_lookup(0);
-      let mut child = 1;
+      let mut hole = Hole::new(&mut self.data, 0);
       while child < end {
         let mut offset = 0;
         let end = num_siblings.min(end.saturating_sub(child));
@@ -186,11 +186,11 @@ const fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
 /// Returns the size of a layer at a given depth.
 #[inline]
 const fn base_layer(d: usize) -> usize {
-  1 << ((d*d + d)/2)
+  1 << ((d * d + d) / 2)
   // 1 << (d * (d + 1) / 2)
 }
 
-const LAYER_TABLE: [usize; 10] = [
+const LAYER_TABLE: [usize; 11] = [
   base_layer(0),
   base_layer(1),
   base_layer(2),
@@ -201,6 +201,8 @@ const LAYER_TABLE: [usize; 10] = [
   base_layer(7),
   base_layer(8),
   base_layer(9),
+  base_layer(10),
+  // Any more layers overflows.
 ];
 
 /// Uses a lookup table to get the base layer.
