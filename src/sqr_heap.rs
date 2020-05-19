@@ -55,13 +55,12 @@ impl<T: Ord> SqrHeap<T> {
   fn sift_down(&mut self, idx: usize, end: usize) -> usize {
     let mut depth = 0;
     let mut curr_sibling = 0;
+    let mut num_siblings = 2 << 0;
     unsafe {
       let mut hole = Hole::new(&mut self.data, idx);
-      let (b, o) = child_index(0, depth, curr_sibling);
-      let mut base = b;
-      let mut child = b + o;
+      let mut base = base_layer(0) as usize;
+      let mut child = 1;
       while child < end {
-        let num_siblings = 2 << depth;
         let mut offset = 0;
         let end = num_siblings.min(end.saturating_sub(child));
         let s = &hole.data[child..child + end];
@@ -75,10 +74,12 @@ impl<T: Ord> SqrHeap<T> {
         }
         hole.move_to(child + offset);
         depth += 1;
+        base += base_layer(depth) as usize;
+
         curr_sibling = curr_sibling * num_siblings + offset;
-        let (b, o) = child_index(base, depth, curr_sibling);
-        base = b;
-        child = b + o;
+        num_siblings <<= 1;
+        let offset = curr_sibling * num_siblings;
+        child = base + offset;
       }
       hole.pos
     }
@@ -88,8 +89,8 @@ impl<T: Ord> SqrHeap<T> {
 #[derive(Debug, Default)]
 struct LastPointer {
   base: usize,
-  depth: u32,
-  last_row_fill: u32,
+  depth: usize,
+  last_row_fill: usize,
 }
 
 impl LastPointer {
@@ -100,6 +101,7 @@ impl LastPointer {
       last_row_fill: 0,
     }
   }
+  #[inline]
   fn inc(&mut self) {
     self.last_row_fill += 1;
     let bl = base_layer(self.depth);
@@ -109,13 +111,14 @@ impl LastPointer {
       self.last_row_fill = 1;
     }
   }
+  #[inline]
   fn dec(&mut self) {
     self.last_row_fill -= 1;
     if self.last_row_fill == 0 && self.depth > 0 {
       self.depth -= 1;
       let prev = base_layer(self.depth);
-      self.base -= prev as usize;
-      self.last_row_fill = prev as u32;
+      self.base -= prev;
+      self.last_row_fill = prev;
     }
   }
 }
@@ -142,12 +145,15 @@ struct Hole<'a, T> {
 }
 
 impl<'a, T> Hole<'a, T> {
+  #[inline]
   unsafe fn new(data: &'a mut [T], pos: usize) -> Self {
     debug_assert!(pos < data.len());
     let elt = ManuallyDrop::new(ptr::read(data.get_unchecked(pos)));
     Self { elt, data, pos }
   }
+  #[inline]
   fn curr(&self) -> &T { &self.elt }
+  #[inline]
   unsafe fn move_to(&mut self, idx: usize) {
     debug_assert_ne!(idx, self.pos);
     debug_assert!(idx < self.data.len());
@@ -169,20 +175,26 @@ impl<T> Drop for Hole<'_, T> {
 }
 
 /// returns parent base and offset for a given index w/ precomputed depth and base.
-fn parent_index(i: usize, depth: u32, base: usize) -> (usize, usize) {
-  debug_assert_ne!(depth, 0, "There is no parent for child 0");
-  debug_assert!(i >= base);
+#[inline]
+const fn parent_index(i: usize, depth: usize, base: usize) -> (usize, usize) {
   let offset = i - base;
   let sibling_num = offset >> depth; // = offset/(1 << depth)?
   let prev_base = base - base_layer(depth - 1) as usize;
   (prev_base, sibling_num)
 }
 
-const fn base_layer(d: u32) -> u32 { 1 << (d * (d + 1) / 2) }
+// TODO maybe convert this to a look-up table?
+/// Returns the size of a layer at a given depth
+#[inline]
+const fn base_layer(d: usize) -> usize {
+  1 << ((d*d + d)/2)
+  // 1 << (d * (d + 1) / 2)
+}
 
+#[inline]
 /// Returns the next base and offset for this child. The sum is the position of the first child.
 /// `sibling_num` is which sibling is this being called from.
-const fn child_index(base: usize, depth: u32, sibling_num: usize) -> (usize, usize) {
+const fn child_index(base: usize, depth: usize, sibling_num: usize) -> (usize, usize) {
   let base = base + base_layer(depth) as usize;
   let offset = (2 << depth) * sibling_num;
   (base, offset)
@@ -220,7 +232,7 @@ fn test_child() {
 #[test]
 fn test_basic() {
   let mut sh = SqrHeap::new();
-  let n = 13;
+  let n = 1000;
   for i in 0..n {
     sh.push(i);
   }
