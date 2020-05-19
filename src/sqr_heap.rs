@@ -4,7 +4,7 @@ use std::{
 };
 
 /// Max heap which uses a squaring strategy for the number of children
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SqrHeap<T> {
   data: Vec<T>,
   ptr: LastPointer,
@@ -37,7 +37,7 @@ impl<T: Ord> SqrHeap<T> {
         }
         hole.move_to(parent);
         depth -= 1;
-        base -= base_layer(depth) as usize;
+        base = b;
       }
       hole.pos
     }
@@ -54,36 +54,38 @@ impl<T: Ord> SqrHeap<T> {
   }
   fn sift_down(&mut self, idx: usize, end: usize) -> usize {
     let mut depth = 0;
-    let mut base = 0;
     let mut curr_sibling = 0;
     unsafe {
       let mut hole = Hole::new(&mut self.data, idx);
-      let (b, o) = child_index(base, depth, curr_sibling);
+      let (b, o) = child_index(0, depth, curr_sibling);
+      let mut base = b;
       let mut child = b + o;
       while child < end {
         let num_siblings = 2 << depth;
         let mut offset = 0;
-        for i in 1..(child + num_siblings).min(end).saturating_sub(child) {
-          if &hole.data[child + i] > &hole.data[child + offset] {
+        let end = num_siblings.min(end.saturating_sub(child));
+        let s = &hole.data[child..child + end];
+        for i in 1..end {
+          if s[i] > s[offset] {
             offset = i;
           }
         }
-        if hole.curr() >= &hole.data[child + offset] {
+        if hole.curr() >= &s[offset] {
           break;
         }
         hole.move_to(child + offset);
-        curr_sibling = curr_sibling * num_siblings + offset;
-        base += base_layer(depth) as usize;
         depth += 1;
+        curr_sibling = curr_sibling * num_siblings + offset;
         let (b, o) = child_index(base, depth, curr_sibling);
         child = b + o;
+        base = b
       }
       hole.pos
     }
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct LastPointer {
   base: usize,
   depth: u32,
@@ -186,9 +188,8 @@ fn parent_index(i: usize, depth: u32, base: usize) -> (usize, usize) {
 
 const fn base_layer(d: u32) -> u32 { 1 << (d * (d + 1) / 2) }
 
-/// Returns the next base and offset for this child. The sum is the index.
-/// `sibling_num` is which sibling is this being called from
-/// `child_num` is which child is being accessed.
+/// Returns the next base and offset for this child. The sum is the position of the first child.
+/// `sibling_num` is which sibling is this being called from.
 const fn child_index(base: usize, depth: u32, sibling_num: usize) -> (usize, usize) {
   let base = base + base_layer(depth) as usize;
   let offset = (2 << depth) * sibling_num;
@@ -227,7 +228,7 @@ fn test_child() {
 #[test]
 fn test_basic() {
   let mut sh = SqrHeap::new();
-  let n = 5000;
+  let n = 13;
   for i in 0..n {
     sh.push(i);
   }
