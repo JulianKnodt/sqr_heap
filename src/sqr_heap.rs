@@ -58,7 +58,7 @@ impl<T: Ord> SqrHeap<T> {
     let mut num_siblings = 2 << 0;
     unsafe {
       let mut hole = Hole::new(&mut self.data, idx);
-      let mut base = base_layer(0) as usize;
+      let mut base = base_layer_lookup(0);
       let mut child = 1;
       while child < end {
         let mut offset = 0;
@@ -74,7 +74,7 @@ impl<T: Ord> SqrHeap<T> {
         }
         hole.move_to(child + offset);
         depth += 1;
-        base += base_layer(depth) as usize;
+        base += base_layer_lookup(depth);
 
         curr_sibling = curr_sibling * num_siblings + offset;
         num_siblings <<= 1;
@@ -89,7 +89,7 @@ impl<T: Ord> SqrHeap<T> {
 #[derive(Debug, Default)]
 struct LastPointer {
   base: usize,
-  depth: usize,
+  depth: u8,
   last_row_fill: usize,
 }
 
@@ -104,9 +104,9 @@ impl LastPointer {
   #[inline]
   fn inc(&mut self) {
     self.last_row_fill += 1;
-    let bl = base_layer(self.depth);
+    let bl = base_layer_lookup(self.depth);
     if self.last_row_fill > bl {
-      self.base += bl as usize;
+      self.base += bl;
       self.depth += 1;
       self.last_row_fill = 1;
     }
@@ -116,7 +116,7 @@ impl LastPointer {
     self.last_row_fill -= 1;
     if self.last_row_fill == 0 && self.depth > 0 {
       self.depth -= 1;
-      let prev = base_layer(self.depth);
+      let prev = base_layer_lookup(self.depth);
       self.base -= prev;
       self.last_row_fill = prev;
     }
@@ -176,10 +176,10 @@ impl<T> Drop for Hole<'_, T> {
 
 /// returns parent base and offset for a given index w/ precomputed depth and base.
 #[inline]
-const fn parent_index(i: usize, depth: usize, base: usize) -> (usize, usize) {
+const fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
   let offset = i - base;
   let sibling_num = offset >> depth; // = offset/(1 << depth)?
-  let prev_base = base - base_layer(depth - 1) as usize;
+  let prev_base = base - base_layer_lookup(depth - 1) as usize;
   (prev_base, sibling_num)
 }
 
@@ -191,11 +191,29 @@ const fn base_layer(d: usize) -> usize {
   // 1 << (d * (d + 1) / 2)
 }
 
+const LAYER_TABLE: [usize; 10] = [
+  base_layer(0),
+  base_layer(1),
+  base_layer(2),
+  base_layer(3),
+  base_layer(4),
+  base_layer(5),
+  base_layer(6),
+  base_layer(7),
+  base_layer(8),
+  base_layer(9),
+];
+
+#[inline]
+const fn base_layer_lookup(d: u8) -> usize {
+  LAYER_TABLE[d as usize]
+}
+
 #[inline]
 /// Returns the next base and offset for this child. The sum is the position of the first child.
 /// `sibling_num` is which sibling is this being called from.
 const fn child_index(base: usize, depth: usize, sibling_num: usize) -> (usize, usize) {
-  let base = base + base_layer(depth) as usize;
+  let base = base + base_layer_lookup(depth as u8) as usize;
   let offset = (2 << depth) * sibling_num;
   (base, offset)
 }
