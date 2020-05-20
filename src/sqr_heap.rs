@@ -45,10 +45,12 @@ impl<T: Ord> SqrHeap<T> {
   pub fn peek(&self) -> Option<&T> { Some(self.data.get(0)?) }
   pub fn pop(&mut self) -> Option<T> {
     let mut item = self.data.pop()?;
-    self.ptr.dec();
     if let Some(mut min) = self.data.get_mut(0) {
+      self.ptr.dec();
       swap(&mut item, &mut min);
       self.sift_down_root(self.data.len());
+    } else {
+      self.ptr.reset();
     }
     Some(item)
   }
@@ -114,12 +116,17 @@ impl LastPointer {
   #[inline]
   fn dec(&mut self) {
     self.last_row_fill -= 1;
-    if self.last_row_fill == 0 && self.depth > 0 {
+    if self.last_row_fill == 0 {
       self.depth -= 1;
       let prev = base_layer_lookup(self.depth);
       self.base -= prev;
       self.last_row_fill = prev;
     }
+  }
+  fn reset(&mut self) {
+    self.base = 0;
+    self.depth =0;
+    self.last_row_fill = 0;
   }
 }
 
@@ -131,7 +138,7 @@ fn test_last_ptr() {
     p.inc();
     assert_eq!(p.base + p.last_row_fill as usize, i + 1);
   }
-  for i in 0..n {
+  for i in 0..n-1 {
     p.dec();
     assert_eq!(p.base + p.last_row_fill as usize, n - i - 1);
   }
