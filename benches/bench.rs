@@ -3,7 +3,12 @@ use sqr_heap::sqr_heap::SqrHeap;
 use std::{collections::BinaryHeap, time::Duration};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-  let range = (4..25).flat_map(|p| vec![1 << p, (1 << p) + (1 << (p-1))]);
+  let range = (18..28).flat_map(|p| vec![
+    1 << p,
+    (1 << p) + (1 << (p-1)),
+    (1 << p) + (1 << (p-1)) + (1 << (p-2)),
+    (1 << p) + (1 << (p-1)) + (1 << (p-2)) + (1 << (p-3)),
+  ]);
   let mut group = c.benchmark_group("pop_push_pair");
   for l in range {
     let mut sh = SqrHeap::new();
@@ -29,7 +34,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
 criterion_group! {
   name = bench;
-  config = Criterion::default().warm_up_time(Duration::from_secs(8));
+  config = Criterion::default().warm_up_time(Duration::from_secs(5));
   targets = criterion_benchmark,
 }
 criterion_main!(bench);
