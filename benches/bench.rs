@@ -3,12 +3,14 @@ use sqr_heap::sqr_heap::SqrHeap;
 use std::{collections::BinaryHeap, time::Duration};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-  let range = (18..28).flat_map(|p| vec![
-    1 << p,
-    (1 << p) + (1 << (p-1)),
-    (1 << p) + (1 << (p-1)) + (1 << (p-2)),
-    (1 << p) + (1 << (p-1)) + (1 << (p-2)) + (1 << (p-3)),
-  ]);
+  let range = (10..30).flat_map(|p| {
+    vec![
+      1 << p,
+      (1 << p) + (1 << (p - 1)),
+      (1 << p) + (1 << (p - 1)) + (1 << (p - 2)),
+      (1 << p) + (1 << (p - 1)) + (1 << (p - 2)) + (1 << (p - 3)),
+    ]
+  });
   let mut group = c.benchmark_group("pop_push_pair");
   for l in range {
     let mut sh = SqrHeap::new();

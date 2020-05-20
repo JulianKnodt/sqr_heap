@@ -32,7 +32,8 @@ impl<T: Ord> SqrHeap<T> {
         let (b, o) = parent_index(hole.pos, depth, base);
         base = b;
         let parent = b + o;
-        if hole.curr() <= &hole.data[parent] {
+        // assert!(parent < hole.pos);
+        if hole.curr() <= &hole.data.get_unchecked(parent) {
           break;
         }
         hole.move_to(parent);
@@ -125,7 +126,7 @@ impl LastPointer {
   }
   fn reset(&mut self) {
     self.base = 0;
-    self.depth =0;
+    self.depth = 0;
     self.last_row_fill = 0;
   }
 }
@@ -138,7 +139,7 @@ fn test_last_ptr() {
     p.inc();
     assert_eq!(p.base + p.last_row_fill as usize, i + 1);
   }
-  for i in 0..n-1 {
+  for i in 0..n - 1 {
     p.dec();
     assert_eq!(p.base + p.last_row_fill as usize, n - i - 1);
   }
