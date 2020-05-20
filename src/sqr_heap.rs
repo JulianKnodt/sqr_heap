@@ -4,7 +4,6 @@ use std::{
 };
 
 /// Max heap which uses a squaring strategy for the number of children
-#[derive(Debug, Default)]
 pub struct SqrHeap<T> {
   data: Vec<T>,
   ptr: LastPointer,
@@ -68,11 +67,12 @@ impl<T: Ord> SqrHeap<T> {
         let last_sib = num_siblings.min(end.saturating_sub(child));
         let s = &hole.data[child..child + last_sib];
         for i in 1..last_sib {
-          if s[i] > s[offset] {
+          // I have no idea how to remove the bounds check by implicit asserts
+          if s.get_unchecked(i) > s.get_unchecked(offset) {
             offset = i;
           }
         }
-        if hole.curr() >= &s[offset] {
+        if hole.curr() >= &s.get_unchecked(offset) {
           break;
         }
         hole.move_to(child + offset);
@@ -89,7 +89,6 @@ impl<T: Ord> SqrHeap<T> {
   }
 }
 
-#[derive(Debug, Default)]
 struct LastPointer {
   base: usize,
   last_row_fill: usize,
