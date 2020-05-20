@@ -3,7 +3,7 @@
 #### Priority Queue with better scaling
 
 A square heap, as opposed to a binary heap is one where the number of children at each level is
-squared. That is, the root has two childrem. Each of those two children has four children,
+squared. That is, the root has two children. Each of those two children has four children,
 meaning a total of 8 children at the next level. Then 64 children for the next layer, and so
 forth.
 
@@ -110,12 +110,18 @@ other interference.
 ![Line Chart Comparison](results/lines.svg)
 ![Violin Plot Comparison](results/violin.svg)
 
-Please note the large scale of the input size. For most smaller input sizes, the binary heap
-outperforms the square heap.
+Please note the large scale of the input size. For smaller input sizes, the binary heap can
+outperform the square heap. It is quite interesting how widely the binary heap's perform varies,
+while the square heap's performance is consistent at each height. Such consistency at this level
+is quite nice for getting consistent performance when using a priority queue as a building
+block.
 
-If you would like to test for yourself, clone this repo and run `cargo bench`. Your results
+If you would like to test for yourself, clone this repo and run `cargo bench`, or for a fully
+optimized build, `make opt`. Your results
 might vary from mine, as they are dependent on the architecture you are running them on.
-Notably, these results are from a machine with an older i7 core.
+Notably, these results are from a machine with an older i7 core. Initially I could not reproduce
+these results on a multi-core architecture where each core is not as powerful, but after adding
+in multiple optimizations, I found it to be replicable elsewhere.
 
 If you find results that contradict these, please submit a github issue. That is much more
 interesting than those that agree with them.
@@ -136,5 +142,29 @@ accesses. While that makes fibonacci heaps impractical for small use cases, the 
 vary the number of children in order to gain some benefit is one that hasn't been explored as
 much. Square heaps are intended to be predictable, variable child, heaps, which don't cast aside
 memory concerns.
+
+### Lessons
+
+While working on this, I learned some interesting things about the toolchain that I'm using.
+Specifically, I realized that the cost at each height was increasing at a much higher cost than
+I expected, and I suspected this was due to bounds checks when comparing children in the
+sift-down function.
+In order to see if this was the case, I used the [godbolt compiler
+explorer](https://rust.godbolt.org/) to directly view the assembly. Strangely, it did not notify
+me that I needed to have a specific instantiation of types in order for my code to actually
+appear(Heap\<i32\> vs Heap\<T\>), and appeared to compile it in debug mode, or at least I assume
+so because there were so many runtime checks which I would hope don't appear in a release build.
+
+From this, I could tell that it was at least compiling bounds checks in what I assumed to be
+debug mode, so I just extrapolated and assumed that it was compiling bounds checks in release
+mode.
+
+I initially tried to mess around with asserts to get it to remove bounds checks, but I
+couldn't find any way, so I just stuck `get_unchecked` into the accesses and saw a 40% reduction
+in runtime. Which is pretty incredible. It went from much worse performance compared to binary
+heaps to reasonably better. I then stuck in `get_unchecked` in a lot of different places and saw
+a significant perf gain. I'm not sure how to justify using unsafe vs. safe but the perf gain
+from these changes is non-trivial and warrants the use of it.
+
 
 
