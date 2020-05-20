@@ -48,25 +48,26 @@ impl<T: Ord> SqrHeap<T> {
     if let Some(mut min) = self.data.get_mut(0) {
       self.ptr.dec();
       swap(&mut item, &mut min);
-      self.sift_down_root(self.data.len());
+      self.sift_down_root();
     } else {
       self.ptr.reset();
     }
     Some(item)
   }
-  fn sift_down_root(&mut self, end: usize) -> usize {
+  fn sift_down_root(&mut self) -> usize {
     let mut depth = 0;
     let mut curr_sibling = 0;
     let mut num_siblings = 2;
     let mut base = base_layer_lookup(0);
     let mut child = 1;
+    let end = self.data.len();
     unsafe {
       let mut hole = Hole::new(&mut self.data, 0);
       while child < end {
         let mut offset = 0;
-        let end = num_siblings.min(end.saturating_sub(child));
-        let s = &hole.data[child..child + end];
-        for i in 1..end {
+        let last_sib = num_siblings.min(end.saturating_sub(child));
+        let s = &hole.data[child..child + last_sib];
+        for i in 1..last_sib {
           if s[i] > s[offset] {
             offset = i;
           }
