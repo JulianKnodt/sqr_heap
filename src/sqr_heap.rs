@@ -184,7 +184,7 @@ impl<T> Drop for Hole<'_, T> {
 
 /// returns parent base and offset for a given index w/ precomputed depth and base.
 #[inline]
-const fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
+fn parent_index(i: usize, depth: u8, base: usize) -> (usize, usize) {
   let offset = i - base;
   let sibling_num = offset >> depth; // = offset/(1 << depth)
   let prev_base = base - base_layer_lookup(depth - 1);
@@ -216,7 +216,7 @@ const LAYER_TABLE: [usize; 11] = [
 /// Uses a lookup table to get the base layer.
 // TODO maybe make this an unchecked access?
 #[inline]
-const fn base_layer_lookup(d: u8) -> usize { LAYER_TABLE[d as usize] }
+fn base_layer_lookup(d: u8) -> usize { unsafe { *LAYER_TABLE.get_unchecked(d as usize) } }
 
 /*
 #[inline]
