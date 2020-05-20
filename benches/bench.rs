@@ -4,7 +4,7 @@ use std::{collections::BinaryHeap, time::Duration};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
   let range = (4..28).flat_map(|p| vec![1 << p, (1 << p) + 1 << (p-1)]);
-  let mut group = c.benchmark_group("pop->push pair");
+  let mut group = c.benchmark_group("pop_push_pair");
   for l in range {
     let mut sh = SqrHeap::new();
     let mut bh = BinaryHeap::new();
