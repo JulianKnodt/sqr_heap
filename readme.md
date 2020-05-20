@@ -33,8 +33,18 @@ Throwing out constants
 h >~ sqrt(1 + 8 log(n))/2
 ```
 
+
 Thus, we find that the height will increase incredibly slowly with respect to the number of
-nodes. Intuitively, the cost of operations in binary heaps are incurred due to traversal up and
+nodes.
+
+##### Cost of push
+
+The cost of a push operation is directly proportional to the height of the tree. Thus, we find
+that it has a better expected run time than a pop operation on a binary heap.
+
+##### Cost of pop/delete-min
+
+Intuitively, the cost of operations in binary heaps are incurred due to traversal up and
 down the heap. Our heap attempts to mitigate that by making the heap shorter but fatter. Of
 course, there is an additional cost now because there is more than one children that needs to
 be checked. Thus, we also must count the number of comparisons as a function of height.
