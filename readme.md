@@ -105,6 +105,7 @@ outperforms the square heap.
 
 If you would like to test for yourself, clone this repo and run `cargo bench`. Your results
 might vary from mine, as they are dependent on the architecture you are running them on.
+Notably, these results are from a machine with an older i7 core.
 
 If you find results that contradict these, please submit a github issue. That is much more
 interesting than those that agree with them.
