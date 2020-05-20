@@ -64,23 +64,22 @@ impl<T: Ord> SqrHeap<T> {
     unsafe {
       let mut hole = Hole::new(&mut self.data, 0);
       while child < end {
-        let mut offset = 0;
-        let last_sib = num_siblings.min(end.saturating_sub(child));
-        let s = &hole.data[child..child + last_sib];
-        for i in 1..last_sib {
+        let mut sib_num = child;
+        let last_sib = (child+num_siblings).min(end);
+        for i in child+1..last_sib {
           // I have no idea how to remove the bounds check by implicit asserts
-          if s.get_unchecked(i) > s.get_unchecked(offset) {
-            offset = i;
+          if hole.data.get_unchecked(i) > hole.data.get_unchecked(sib_num) {
+            sib_num = i;
           }
         }
-        if hole.curr() >= &s.get_unchecked(offset) {
+        if hole.curr() >= &hole.data.get_unchecked(sib_num) {
           break;
         }
-        hole.move_to(child + offset);
+        hole.move_to(sib_num);
         depth += 1;
         base += base_layer_lookup(depth);
 
-        curr_sibling = curr_sibling * num_siblings + offset;
+        curr_sibling = curr_sibling * num_siblings + (sib_num - child);
         num_siblings <<= 1;
         let offset = curr_sibling * num_siblings;
         child = base + offset;
