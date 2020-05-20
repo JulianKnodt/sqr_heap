@@ -7,7 +7,10 @@ squared. That is, the root has two childrem. Each of those two children has four
 meaning a total of 8 children at the next level. Then 64 children for the next layer, and so
 forth.
 
-## But why?  The number of nodes when a tree is full at a given height is ```
+## But why?
+The number of nodes when a tree is full at a given height is
+
+```
 nodes(h) = (0..h).fold(0, |acc, n| acc + 2**(n * (n+1)/2))
 ```
 
@@ -94,6 +97,33 @@ the element back on the heap. For both binary heaps and square heaps, this will 
 and down the heap for each iteration. Thus, this should test the raw speed of each without any
 other interference.
 
+![Line Chart Comparison](results/lines.svg)
+![Violin Plot Comparison](results/violin.svg)
 
+Please note the large scale of the input size. For most smaller input sizes, the binary heap
+outperforms the square heap.
+
+If you would like to test for yourself, clone this repo and run `cargo bench`. Your results
+might vary from mine, as they are dependent on the architecture you are running them on.
+
+If you find results that contradict these, please submit a github issue. That is much more
+interesting than those that agree with them.
+
+### Should I use this repo?
+
+Absolutely not. The API here is a bare-bones skeleton intended to demonstrate the feasibility of
+a square heap. It's still missing a bunch of pleasantries such as iterators and other nice
+functions which the standard library has.
+
+### Inspiration
+
+The main inspiration for this data structure are [fibonacci
+heaps](https://en.wikipedia.org/wiki/Fibonacci_heap), which intend to be much more
+efficient than binary heaps. The main practical issue with fibonacci heaps is that they make use
+of linked-lists, and do not have prescribed sizes, so they end up incurring a cost in memory
+accesses. While that makes fibonacci heaps impractical for small use cases, the idea that we can
+vary the number of children in order to gain some benefit is one that hasn't been explored as
+much. Square heaps are intended to be predictable, variable child, heaps, which don't cast aside
+memory concerns.
 
 
