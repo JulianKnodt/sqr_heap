@@ -79,10 +79,10 @@ impl<T: Ord> SqrHeap<T> {
         depth += 1;
         base += base_layer_lookup(depth);
 
-        curr_sibling = curr_sibling * num_siblings + (sib_num - child);
+        let next_offset = curr_sibling * num_siblings;
+        curr_sibling = next_offset + (sib_num - child);
         num_siblings <<= 1;
-        let offset = curr_sibling * num_siblings;
-        child = base + offset;
+        child = base + (next_offset << 1);
       }
       hole.pos
     }
